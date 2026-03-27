@@ -46,8 +46,16 @@ export function formatApprovalRequest(req) {
 }
 function formatToolInput(toolName, input) {
     switch (toolName) {
-        case 'Bash':
-            return `命令: ${String(input.command ?? '').slice(0, 200)}`;
+        case 'Bash': {
+            const cmd = String(input.command ?? input.cmd ?? '');
+            const desc = String(input.description ?? input.desc ?? '');
+            const lines = [];
+            if (cmd)
+                lines.push(`命令: ${cmd.slice(0, 500)}`);
+            if (desc)
+                lines.push(`说明: ${desc}`);
+            return lines.join('\n') || '(无命令)';
+        }
         case 'Write':
             return `写入文件: ${input.file_path ?? input.path ?? ''}`;
         case 'Edit':
@@ -56,7 +64,7 @@ function formatToolInput(toolName, input) {
         case 'WebFetch':
             return `请求 URL: ${input.url ?? ''}`;
         default:
-            return `参数: ${JSON.stringify(input).slice(0, 200)}`;
+            return `参数: ${JSON.stringify(input).slice(0, 300)}`;
     }
 }
 /** 启动文件监视器，每 500ms 轮询 /tmp 目录 */

@@ -58,8 +58,14 @@ export function formatApprovalRequest(req: ApprovalRequest): string {
 
 function formatToolInput(toolName: string, input: Record<string, unknown>): string {
   switch (toolName) {
-    case 'Bash':
-      return `命令: ${String(input.command ?? '').slice(0, 200)}`;
+    case 'Bash': {
+      const cmd = String(input.command ?? input.cmd ?? '');
+      const desc = String(input.description ?? input.desc ?? '');
+      const lines: string[] = [];
+      if (cmd) lines.push(`命令: ${cmd.slice(0, 500)}`);
+      if (desc) lines.push(`说明: ${desc}`);
+      return lines.join('\n') || '(无命令)';
+    }
     case 'Write':
       return `写入文件: ${input.file_path ?? input.path ?? ''}`;
     case 'Edit':
@@ -68,7 +74,7 @@ function formatToolInput(toolName: string, input: Record<string, unknown>): stri
     case 'WebFetch':
       return `请求 URL: ${input.url ?? ''}`;
     default:
-      return `参数: ${JSON.stringify(input).slice(0, 200)}`;
+      return `参数: ${JSON.stringify(input).slice(0, 300)}`;
   }
 }
 
