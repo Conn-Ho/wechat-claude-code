@@ -11,9 +11,8 @@
 - **图片 / 文件传输**：发图片给 Claude 让它分析，Claude 生成的文件也能回传微信
 - **语音消息**：自动提取转写文字后转发给 Claude
 
-### 新增功能
+### 权限审批
 
-#### 权限审批
 开启后，Claude 每次执行 Bash 命令、写文件、编辑文件前，会先发微信问你是否允许：
 
 ```
@@ -27,14 +26,80 @@
 
 回复 `y` 放行，回复 `n` 拒绝。默认关闭，需手动开启。
 
-#### 任务完成通知
+### 审批白名单
+
+为常见操作设置自动允许/拒绝规则，无需每次手动确认：
+
+```
+/allow Bash:npm*    # 自动允许所有 npm 开头的命令
+/deny Bash:rm -rf*  # 自动拒绝危险命令
+/whitelist          # 查看所有规则
+```
+
+### 任务完成通知
 Claude 完成任务后自动推送微信通知，无需盯着终端等。
 
-#### 中断控制
+### 流式进度推送
+任务执行超过 30 秒，每隔 30 秒推送一次心跳消息，告知当前已用时。
+
+### 中断控制
 在微信发 `/stop`，立即中断 Claude 正在执行的任务。
 
-#### 主动推送
-Claude 可以主动向微信发消息（如任务完成摘要、发现错误等），无需你先发消息触发。
+### 多项目管理
+
+管理多个代码仓库，随时切换：
+
+```
+/project add myapp ~/code/myapp  # 添加项目
+/projects                         # 列出所有项目
+/switch myapp                     # 切换到 myapp 项目
+```
+
+### 任务历史
+
+查看最近 20 条任务记录，支持重发：
+
+```
+/history      # 查看历史
+/retry        # 重发最新任务
+/redo 3       # 重发第 3 条历史
+```
+
+### 定时任务
+
+定时或周期性执行任务：
+
+```
+/schedule 09:00 "检查并推送今日代码"        # 每天 9 点执行
+/schedule 2026-04-01 10:00 "部署生产环境"  # 指定日期执行
+/cron "0 9 * * 1" "周报生成"               # Cron 表达式
+/jobs           # 查看所有任务
+/cancel abc123  # 取消任务
+```
+
+### 用量统计
+
+```
+/usage    # 查看今日消息数和 Token 估算
+```
+
+### 用户访问控制
+
+控制哪些微信账号可以操控 Claude（默认所有人均可）：
+
+```
+/trust <微信ID> <备注>  # 添加信任用户
+/untrust <微信ID>       # 移除
+/users                  # 查看列表
+```
+
+### 文件请求
+
+从服务器获取文件内容：
+
+```
+/get ~/code/myapp/src/index.ts   # 获取文件（小文本直接显示，大文件作附件发送）
+```
 
 ---
 
@@ -101,6 +166,25 @@ node dist/cli.js unpatch
 | `n <id>` | 拒绝指定 ID 的操作 |
 | `/stop` | 中断 Claude 当前任务 |
 | `/status` | 查看运行状态和待审批列表 |
+| `/allow <工具>:<模式>` | 添加自动允许规则 |
+| `/deny <工具>:<模式>` | 添加自动拒绝规则 |
+| `/whitelist` | 查看审批白名单 |
+| `/whitelist remove <id>` | 删除规则 |
+| `/project add <名> <路径>` | 添加项目 |
+| `/projects` | 列出所有项目 |
+| `/switch <名>` | 切换当前项目 |
+| `/history` | 查看任务历史 |
+| `/retry` | 重发最新任务 |
+| `/redo <n>` | 重发第 n 条历史 |
+| `/schedule <时间> "<任务>"` | 添加定时任务 |
+| `/cron "<表达式>" "<任务>"` | 添加周期任务 |
+| `/jobs` | 查看定时任务 |
+| `/cancel <id>` | 取消定时任务 |
+| `/usage` | 用量统计 |
+| `/trust <ID>` | 添加信任用户 |
+| `/untrust <ID>` | 移除信任用户 |
+| `/users` | 查看用户列表 |
+| `/get <路径>` | 请求文件内容 |
 | `/help` | 显示帮助 |
 
 其他任何消息都会直接发给 Claude 执行。
@@ -175,6 +259,7 @@ node dist/cli.js help            # 显示帮助
 ```
 Claude 调用工具（Bash / Write / Edit）
   → PreToolUse hook 触发（仅 approval-mode 开启时）
+  → 检查审批白名单 → 自动放行/拒绝（命中规则时）
   → 写入 /tmp/wcc-approval-{id}.pending
   → MCP Server 检测到文件 → 发微信审批请求
   → 用户回复 y/n
@@ -189,6 +274,10 @@ Stop hook 在 Claude 完成响应后触发，读取 `~/.claude/channels/wechat/l
 ### 中断控制
 
 `/stop` 命令触发后，MCP Server 执行 `process.kill(process.ppid, 'SIGINT')`，向父进程 Claude Code 发送中断信号。
+
+### 定时任务
+
+MCP Server 内置调度循环，每分钟检查 `~/.claude/channels/wechat/jobs.json`，到期任务通过 channel notification 转发给 Claude 执行。
 
 ---
 
