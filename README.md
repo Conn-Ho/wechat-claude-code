@@ -292,4 +292,4 @@ MCP Server 内置调度循环，每分钟检查 `~/.claude/channels/wechat/jobs.
 
 ## License
 
-MIT
+Apache 2.0
