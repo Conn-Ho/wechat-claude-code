@@ -1,3 +1,5 @@
+
+
 # wechat-claude-code
 
 通过微信远程控制 Claude Code。扫码登录后，直接在微信里给 Claude 发任务、审批操作、中断执行、接收完成通知。
@@ -116,6 +118,7 @@ Claude 完成任务后自动推送微信通知，无需盯着终端等。
 ```bash
 git clone https://github.com/Conn-Ho/wechat-claude-code.git
 cd wechat-claude-code
+npm install
 ```
 
 无需编译，`dist/` 已包含在仓库中。
